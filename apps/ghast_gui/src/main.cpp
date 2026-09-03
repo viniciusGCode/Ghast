@@ -1,4 +1,5 @@
 #include <ghast/windows/process_snapshot.hpp>
+#include <ghast/windows/process_memory.hpp>
 
 #include <Windows.h>
 #include <CommCtrl.h>
@@ -7,12 +8,17 @@
 #pragma comment(linker, "\"/manifestdependency:type='win32' name='Microsoft.Windows.Common-Controls' version='6.0.0.0' processorArchitecture='*' publicKeyToken='6595b64144ccf1df' language='*'\"")
 #endif
 
+#include <cctype>
 #include <cstddef>
+#include <cstdint>
 #include <cwctype>
+#include <exception>
+#include <iomanip>
 #include <optional>
 #include <sstream>
 #include <string>
 #include <system_error>
+#include <vector>
 
 // buttons = 1000
 constexpr int refresh_button_id = 1001;
@@ -29,6 +35,9 @@ constexpr int output_text_id = 3001;
 
 HWND output_text = nullptr;
 HWND filter_input = nullptr;
+HWND pid_input = nullptr;
+HWND address_input = nullptr;
+HWND size_input = nullptr;
 HFONT ui_font = nullptr;
 HFONT monospace_font = nullptr;
 HBRUSH window_background = nullptr;
@@ -221,13 +230,13 @@ void create_main_controls(HWND window, HINSTANCE instance)
   const HWND refresh_button = create_button(window, instance, refresh_button_id, L"Refresh", 314, 13, 100, 30);
 
   const HWND pid_label = create_label(window, instance, L"PID", 16, 58, 40, 24);
-  const HWND pid_input = create_input(window, instance, pid_input_id, 56, 56, 120, 26);
+  pid_input = create_input(window, instance, pid_input_id, 56, 56, 120, 26);
 
   const HWND address_label = create_label(window, instance, L"Address", 192, 58, 56, 24);
-  const HWND address_input = create_input(window, instance, address_input_id, 254, 56, 180, 26);
+  address_input = create_input(window, instance, address_input_id, 254, 56, 180, 26);
 
   const HWND size_label = create_label(window, instance, L"Size", 450, 58, 32, 24);
-  const HWND size_input = create_input(window, instance, size_input_id, 488, 56, 80, 26);
+  size_input = create_input(window, instance, size_input_id, 488, 56, 80, 26);
 
   const HWND read_button = create_button(window, instance, read_button_id, L"Read", 584, 55, 80, 30);
 
@@ -270,6 +279,77 @@ std::wstring get_window_text(HWND window)
   text.resize(static_cast<std::size_t>(copied));
 
   return text;
+}
+
+std::uint32_t parse_process_id(const std::wstring& value)
+{
+  return static_cast<std::uint32_t>(std::stoul(value, nullptr, 10));
+}
+
+std::uintptr_t parse_address(const std::wstring& value)
+{
+  return static_cast<std::uintptr_t>(std::stoull(value, nullptr, 16));
+}
+
+std::size_t parse_size(const std::wstring& value)
+{
+  return static_cast<std::size_t>(std::stoull(value, nullptr, 10));
+}
+
+wchar_t printable_ascii(std::byte byte)
+{
+  const auto value = static_cast<unsigned char>(byte);
+
+  if (std::isprint(value)) {
+    return static_cast<wchar_t>(value);
+  }
+
+  return L'.';
+}
+
+std::wstring build_hex_dump_text(const std::vector<std::byte>& bytes)
+{
+  constexpr std::size_t bytes_per_line = 16;
+
+  std::wstringstream output;
+
+  for (std::size_t offset = 0; offset < bytes.size(); offset += bytes_per_line) {
+    output
+        << std::hex
+        << std::setw(8)
+        << std::setfill(L'0')
+        << offset
+        << L": ";
+
+    for (std::size_t index = 0; index < bytes_per_line; ++index) {
+      const auto byte_index = offset + index;
+
+      if(byte_index < bytes.size()) {
+        const auto value = static_cast<unsigned char>(bytes[byte_index]);
+        output
+            << std::setw(2)
+            << std::setfill(L'0')
+            << value
+            << L' ';
+      } else {
+        output << L"   ";
+      }
+    }
+
+    output << L" ";
+
+    for (std::size_t index = 0; index < bytes_per_line; ++index) {
+      const auto byte_index = offset + index;
+
+      if(byte_index < bytes.size()) {
+        output << printable_ascii(bytes[byte_index]);
+      }
+    }
+
+    output << L"\r\n";
+  }
+
+  return output.str();
 }
 
 std::wstring to_lowercase(std::wstring value)
@@ -337,6 +417,32 @@ void refresh_process_list()
   }
 }
 
+void read_memory()
+{
+  try {
+    const auto process_id = parse_process_id(get_window_text(pid_input));
+    const auto address = parse_address(get_window_text(address_input));
+    const auto size = parse_size(get_window_text(size_input));
+
+    const auto bytes = ghast::windows::read_process_memory(process_id, address, size);
+    const auto text = build_hex_dump_text(bytes);
+
+    set_output_text(text.c_str());
+  } catch (const std::system_error& error) {
+    std::wstringstream output;
+    output << L"Error reading process memory: " << error.code().value() << L"\r\n";
+
+    set_output_text(output.str().c_str());
+  } catch (const std::exception& error) {
+    (void)error;
+
+    std::wstringstream output;
+    output << L"Invalid read input\r\n";
+
+    set_output_text(output.str().c_str());
+  }
+}
+
 LRESULT CALLBACK window_proc(
     HWND window,
     UINT message,
@@ -392,7 +498,7 @@ LRESULT CALLBACK window_proc(
     }
 
     if(control_id == read_button_id) {
-      set_output_text(L"Read clicked\r\n");
+      read_memory();
       return 0;
     }
   }

@@ -10,6 +10,7 @@ Funcionalidades atuais:
 - filtro por nome do executável;
 - impressão de PID, nome do executável e caminho quando disponível;
 - leitura de bytes brutos de outro processo com `ReadProcessMemory`;
+- GUI Win32 inicial com listagem filtrada de processos e leitura de memória;
 - `ghast_lab` como processo-alvo controlado com valores conhecidos em memória.
 
 ## Requisitos
@@ -69,11 +70,24 @@ Exemplo:
 .\build\msvc-debug\apps\ghast_app\Debug\ghast_app.exe read 13808 0000007A2DEFF748 32
 ```
 
+Também é possível usar a GUI Win32 inicial:
+
+```powershell
+.\build\msvc-debug\apps\ghast_gui\Debug\ghast_gui.exe
+```
+
+Na GUI:
+
+- use `Filter` e `Refresh` para listar processos por nome;
+- preencha `PID`, `Address` e `Size`;
+- clique `Read` para ler memória e exibir o dump hexadecimal/ASCII.
+
 ## Estrutura
 
 ```text
 apps/ghast_app   executável CLI principal
 apps/ghast_lab   processo-alvo controlado para inspeção de memória
+apps/ghast_gui   GUI Win32 inicial
 src/windows      helpers de processo e memória usando WinAPI
 scripts          helpers locais de shell de desenvolvimento
 ```
