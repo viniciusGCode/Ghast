@@ -36,7 +36,7 @@ int main()
 {
 
     LabState state{
-        0x6c6f7665,
+        0x65766f6c, //inverted love
         {1337, 2048, 4096, 9001},
         1337,
         {'G', 'H', 'A', 'S', 'T', 'L', 'A', 'B'}

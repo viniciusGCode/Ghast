@@ -1,6 +1,7 @@
 #include <ghast/windows/process_snapshot.hpp>
 #include <ghast/windows/process_memory.hpp>
 
+#include <cctype>
 #include <cwctype>
 #include <iomanip>
 #include <iostream>
@@ -43,15 +44,58 @@ void print_process(const ghast::windows::ProcessSummary& process)
     std::wcout << L'\n';
 }
 
-void print_bytes(const std::vector<std::byte>& bytes)
+wchar_t printable_ascii(std::byte byte)
 {
-    for (const auto byte : bytes) {
-        const auto value = static_cast<unsigned int>(byte);
-        std::wcout << std::hex << std::setw(2) << std::setfill(L'0')
-                   << value << L' ';
+    const auto value = static_cast<unsigned char>(byte);
+
+    if (std::isprint(value)) {
+        return static_cast<wchar_t>(value);
     }
 
-    std::wcout << std::dec << L'\n';
+    return L'.';
+}
+
+void print_hex_dump(const std::vector<std::byte>& bytes)
+{
+    constexpr std::size_t bytes_per_line = 16;
+
+    for (std::size_t offset = 0; offset < bytes.size(); offset += bytes_per_line) {
+        std::wcout
+            <<std::hex
+            <<std::setw(8)
+            <<std::setfill(L'0')
+            <<offset
+            <<L": ";
+
+        for (std::size_t index = 0; index < bytes_per_line; ++index) {
+            const auto byte_index = offset + index;
+
+            if(byte_index < bytes.size()) {
+                const auto value = static_cast<unsigned char>(bytes[byte_index]);
+                std::wcout
+                    << std::setw(2)
+                    << std::setfill(L'0')
+                    << value
+                    << L' ';
+            } else {
+                std::wcout << L"   ";
+            
+            }
+        }
+
+        std::wcout << L" ";
+
+        for (std::size_t index = 0; index < bytes_per_line; ++index) {
+            const auto byte_index = offset + index;
+
+            if(byte_index < bytes.size()) {
+                std::wcout << printable_ascii(bytes[byte_index]);
+            }
+        }
+
+        std::wcout << L'\n';
+    }
+    std::wcout << std::dec;
 }
 
 std::uint32_t parse_process_id(const wchar_t* value)
@@ -100,7 +144,7 @@ int wmain(int argc, wchar_t* argv[])
 
         try {
             const auto bytes = ghast::windows::read_process_memory(process_id, address, size);
-            print_bytes(bytes);
+            print_hex_dump(bytes);
             return 0;
         } catch (const std::system_error& error) {
             std::cerr << "Error reading process memory: " << error.code().value() << '\n';

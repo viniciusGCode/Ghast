@@ -1,31 +1,33 @@
 # Ghast
 
-Ghast is an early Windows-only C++20/CMake project for process memory inspection experiments using WinAPI directly.
+Ghast é um projeto Windows-only em C++20/CMake para experimentos de inspeção de memória de processos usando WinAPI diretamente.
 
-Current capabilities:
+O objetivo é evoluir para uma ferramenta open source brasileira para estudo e construção prática de tooling low-level no Windows.
 
-- enumerate running processes;
-- filter processes by executable name;
-- print PID, executable name, and executable path when available;
-- read raw bytes from another process with `ReadProcessMemory`;
-- run `ghast_lab` as a controlled target process with known values in memory.
+Funcionalidades atuais:
 
-## Requirements
+- enumeração de processos em execução;
+- filtro por nome do executável;
+- impressão de PID, nome do executável e caminho quando disponível;
+- leitura de bytes brutos de outro processo com `ReadProcessMemory`;
+- `ghast_lab` como processo-alvo controlado com valores conhecidos em memória.
+
+## Requisitos
 
 - Windows 10/11 x64
-- Visual Studio Build Tools with the C++ workload
+- Visual Studio Build Tools com workload de C++
 - CMake
 - Ninja
 
 ## Build
 
-From the repository root, open the MSVC developer shell:
+Na raiz do repositório, abra o shell de desenvolvimento MSVC:
 
 ```powershell
 .\scripts\dev-shell.cmd
 ```
 
-Then build:
+Depois rode:
 
 ```powershell
 cmake --preset msvc-debug
@@ -33,15 +35,15 @@ cmake --build --preset msvc-debug
 ctest --test-dir build\msvc-debug --output-on-failure
 ```
 
-## Usage
+## Uso
 
-Start the lab process in one terminal:
+Inicie o processo de laboratório em um terminal:
 
 ```powershell
 .\build\msvc-debug\apps\ghast_lab\Debug\ghast_lab.exe
 ```
 
-It prints its PID, a state address, field offsets, and then waits for commands:
+Ele imprime o PID, um endereço de estado, offsets dos campos e espera comandos:
 
 ```text
 show
@@ -49,31 +51,31 @@ set 2048
 quit
 ```
 
-In another terminal, list processes matching the lab:
+Em outro terminal, liste processos filtrando pelo lab:
 
 ```powershell
 .\build\msvc-debug\apps\ghast_app\Debug\ghast_app.exe LAB
 ```
 
-Read memory from the lab using the PID and state address printed by `ghast_lab`:
+Leia memória do lab usando o PID e o endereço de estado impressos pelo `ghast_lab`:
 
 ```powershell
 .\build\msvc-debug\apps\ghast_app\Debug\ghast_app.exe read <pid> <hex-address> 32
 ```
 
-Example:
+Exemplo:
 
 ```powershell
 .\build\msvc-debug\apps\ghast_app\Debug\ghast_app.exe read 13808 0000007A2DEFF748 32
 ```
 
-## Layout
+## Estrutura
 
 ```text
-apps/ghast_app   main CLI executable
-apps/ghast_lab   controlled target process for memory inspection
-src/windows      WinAPI-backed process and memory helpers
-scripts          local developer shell helpers
+apps/ghast_app   executável CLI principal
+apps/ghast_lab   processo-alvo controlado para inspeção de memória
+src/windows      helpers de processo e memória usando WinAPI
+scripts          helpers locais de shell de desenvolvimento
 ```
 
-`build/` is generated output and should not be edited.
+`build/` é saída gerada e não deve ser editado.
