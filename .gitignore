@@ -1,0 +1,20 @@
+# Local build output
+/build/
+/docs/
+/out/
+/vcpkg_installed/
+/CMakeUserPresets.json
+
+# Agent/process artifacts are not project source.
+/.agents/
+/.claude/
+/_bmad/
+/_bmad-output/
+
+# IDE and OS-local files
+/.vs/
+/.vscode/settings.json
+*.user
+*.suo
+Thumbs.db
+Desktop.ini
