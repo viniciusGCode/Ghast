@@ -27,3 +27,4 @@ add_subdirectory(src/windows)
 
 add_subdirectory(apps/ghast_app)
 add_subdirectory(apps/ghast_lab)
+add_subdirectory(apps/ghast_gui)
